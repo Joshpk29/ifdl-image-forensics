@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+  <h1>IFDL Image Forensics</h1>
+
+  <label for="apiUrl">API endpoint</label>
+  <input id="apiUrl" type="text" placeholder="http://localhost:8000/analyze" />
+
+  <label class="toggle">
+    <input id="enabled" type="checkbox" checked />
+    Scan images on this page
+  </label>
+
+  <button id="save">Save</button>
+  <p id="status"></p>
+
+  <script src="popup.js"></script>
+</body>
+</html>

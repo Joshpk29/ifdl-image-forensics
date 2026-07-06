@@ -1,0 +1,43 @@
+body {
+  width: 240px;
+  font: 13px -apple-system, sans-serif;
+  padding: 12px;
+}
+
+h1 {
+  font-size: 14px;
+  margin: 0 0 10px;
+}
+
+label {
+  display: block;
+  margin-top: 8px;
+  font-weight: 600;
+}
+
+input[type="text"] {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 4px;
+  margin-top: 4px;
+}
+
+.toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: normal;
+}
+
+button {
+  margin-top: 10px;
+  width: 100%;
+  padding: 6px;
+  cursor: pointer;
+}
+
+#status {
+  font-size: 11px;
+  color: #666;
+  min-height: 14px;
+}

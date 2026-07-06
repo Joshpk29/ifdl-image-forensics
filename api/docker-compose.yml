@@ -1,0 +1,36 @@
+services:
+  orchestrator:
+    build: ./orchestrator
+    ports:
+      - "8000:8000"
+    environment:
+      - TRUFOR_URL=http://trufor:8001
+      - HIFI_URL=http://hifi:8002
+      - MANIPULATED_THRESHOLD=0.5
+    depends_on:
+      - hifi
+    restart: unless-stopped
+
+  # TruFor's pretrained weights are hosted on grip.unina.it, which has been
+  # unreachable (server-side outage, not a Docker networking issue — confirmed
+  # by testing the URL directly in a browser). This service is disabled by
+  # default so `docker compose up` isn't blocked by it. The orchestrator
+  # already degrades gracefully to HiFi-IFDL-only results when TruFor is
+  # unavailable. Once grip.unina.it is back up, re-enable with:
+  #   docker compose --profile trufor up --build
+  trufor:
+    profiles: ["trufor"]
+    build: ./services/trufor
+    expose:
+      - "8001"
+    restart: unless-stopped
+
+  hifi:
+    build: ./services/hifi
+    expose:
+      - "8002"
+    volumes:
+      # Manually-downloaded weights (see README.md) — mounted so you don't have
+      # to rebuild the image after downloading or updating them.
+      - ./services/hifi/weights:/app/HiFi_IFDL/weights
+    restart: unless-stopped
