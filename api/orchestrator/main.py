@@ -5,10 +5,17 @@ POST /analyze accepts either:
   - JSON: {"image_url": "https://..."}   (what the extension currently sends)
   - multipart/form-data with a `file` field (for direct testing, e.g. curl)
 
-It fetches the image, sends it to both model services (TruFor and HiFi-IFDL)
-in parallel, and combines their outputs into one response. If a model service
+It fetches the image, sends it to all configured model services (TruFor,
+HiFi-IFDL, and — if the `sida` Compose profile is enabled — SIDA) in
+parallel, and combines their outputs into one response. If a model service
 is unreachable or errors, its result is omitted rather than failing the whole
-request — you still get a result from whichever model succeeded.
+request — you still get a result from whichever model(s) succeeded.
+
+SIDA is the odd one out: besides a score and localization map like the other
+two, it also produces a written explanation of why an image looks
+manipulated. That text is surfaced at the top level as `explanation` (rather
+than requiring the caller to dig into `models.sida`) since it's the main
+thing SIDA adds over TruFor/HiFi-IFDL.
 """
 import asyncio
 import base64
@@ -25,6 +32,7 @@ from pydantic import BaseModel
 
 TRUFOR_URL = os.environ.get("TRUFOR_URL", "http://trufor:8001")
 HIFI_URL = os.environ.get("HIFI_URL", "http://hifi:8002")
+SIDA_URL = os.environ.get("SIDA_URL", "http://sida:8003")
 MANIPULATED_THRESHOLD = float(os.environ.get("MANIPULATED_THRESHOLD", "0.5"))
 REQUEST_TIMEOUT = float(os.environ.get("MODEL_REQUEST_TIMEOUT", "60"))
 
@@ -111,25 +119,41 @@ def _score_of(result: dict) -> Optional[float]:
     return None
 
 
+def _explanation_of(per_model: dict) -> Optional[dict]:
+    """SIDA is currently the only model that produces a text explanation.
+    Pulled out as its own helper (rather than hardcoding "sida" at the call
+    site) so a future explanation-capable model just needs a branch here."""
+    sida_result = per_model.get("sida")
+    if not sida_result or "error" in sida_result:
+        return None
+    text = sida_result.get("explanation")
+    if not text:
+        return None
+    return {"text": text, "model": "sida", "class": sida_result.get("class")}
+
+
 async def _analyze_bytes(image_bytes: bytes) -> dict:
     # trust_env=False: these are calls to internal Docker-network services
-    # (trufor/hifi), so any HTTP_PROXY/SOCKS proxy set in the environment
+    # (trufor/hifi/sida), so any HTTP_PROXY/SOCKS proxy set in the environment
     # should not apply here — and if it's a SOCKS proxy, httpx would otherwise
     # require the optional `socksio` dependency just to ignore it.
     async with httpx.AsyncClient(trust_env=False) as client:
         trufor_task = _call_model(client, TRUFOR_URL, image_bytes)
         hifi_task = _call_model(client, HIFI_URL, image_bytes)
-        trufor_result, hifi_result = await asyncio.gather(trufor_task, hifi_task)
+        sida_task = _call_model(client, SIDA_URL, image_bytes)
+        trufor_result, hifi_result, sida_result = await asyncio.gather(
+            trufor_task, hifi_task, sida_task
+        )
 
-    per_model = {"trufor": trufor_result, "hifi_ifdl": hifi_result}
+    per_model = {"trufor": trufor_result, "hifi_ifdl": hifi_result, "sida": sida_result}
 
-    ok_results = [r for r in (trufor_result, hifi_result) if r and "error" not in r]
+    ok_results = [r for r in (trufor_result, hifi_result, sida_result) if r and "error" not in r]
     scores = [s for s in (_score_of(r) for r in ok_results) if s is not None]
 
     if not scores:
         raise HTTPException(
             status_code=502,
-            detail={"message": "Both model services failed", "models": per_model},
+            detail={"message": "All model services failed", "models": per_model},
         )
 
     confidence = float(sum(scores) / len(scores))
@@ -139,6 +163,7 @@ async def _analyze_bytes(image_bytes: bytes) -> dict:
         "manipulated": manipulated,
         "confidence": confidence,
         "localization_map_png_base64": _combine_localization_maps(ok_results),
+        "explanation": _explanation_of(per_model),
         "models": per_model,
     }
 

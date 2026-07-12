@@ -61,6 +61,22 @@ function applyOverlay(img, result) {
     overlayImg.alt = "";
   }
 
+  // SIDA is the only model that produces a written explanation. When present,
+  // show an excerpt in a hover tooltip on the badge — the full text lives in
+  // the popup (see storeLastFlagged below), since a feed-image tooltip isn't
+  // a great place for a paragraph of text.
+  let tooltip = null;
+  const explanationText = result.explanation && result.explanation.text;
+  if (explanationText) {
+    tooltip = document.createElement("div");
+    tooltip.className = "ifdl-tooltip";
+    const excerpt =
+      explanationText.length > 220 ? `${explanationText.slice(0, 220)}…` : explanationText;
+    tooltip.textContent = excerpt;
+    badge.addEventListener("mouseenter", () => tooltip.classList.add("ifdl-tooltip-visible"));
+    badge.addEventListener("mouseleave", () => tooltip.classList.remove("ifdl-tooltip-visible"));
+  }
+
   badge.addEventListener("click", (e) => {
     e.preventDefault();
     e.stopPropagation();
@@ -71,11 +87,33 @@ function applyOverlay(img, result) {
 
   container.appendChild(badge);
   if (overlayImg) container.appendChild(overlayImg);
+  if (tooltip) container.appendChild(tooltip);
   document.body.appendChild(container);
+
+  if (result.manipulated && explanationText) {
+    storeLastFlagged(img, result);
+  }
 
   const entry = { img, container, badge, overlayImg, result, mapVisible: false };
   entries.push(entry);
   positionEntry(entry);
+}
+
+// Popup has no access to feed page state, so the last flagged image (with
+// SIDA's explanation) is handed off via chrome.storage.local. Only the most
+// recent one is kept — this is a lightweight "why was I just warned" lookup,
+// not a history log.
+function storeLastFlagged(img, result) {
+  chrome.storage.local.set({
+    lastFlagged: {
+      imageUrl: img.currentSrc || img.src,
+      pageUrl: location.href,
+      confidence: result.confidence,
+      explanation: result.explanation.text,
+      explanationClass: result.explanation.class,
+      timestamp: Date.now(),
+    },
+  });
 }
 
 function positionEntry(entry) {

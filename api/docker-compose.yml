@@ -6,6 +6,7 @@ services:
     environment:
       - TRUFOR_URL=http://trufor:8001
       - HIFI_URL=http://hifi:8002
+      - SIDA_URL=http://sida:8003
       - MANIPULATED_THRESHOLD=0.5
     depends_on:
       - hifi
@@ -34,3 +35,32 @@ services:
       # to rebuild the image after downloading or updating them.
       - ./services/hifi/weights:/app/HiFi_IFDL/weights
     restart: unless-stopped
+
+  # SIDA is a 7B-parameter multimodal LLM (LLaVA/LISA + SAM) — it does
+  # detection + localization like the other two, plus a written explanation
+  # of why an image looks manipulated. It's gated behind its own profile
+  # (like TruFor) because of the ~14GB one-time model download, not because
+  # of a hard hardware requirement — it runs on CPU (auto-detected, see
+  # services/sida/app.py), same as TruFor/HiFi-IFDL, since Docker Desktop
+  # (e.g. on a Mac) has no path to GPU passthrough anyway. CPU inference is
+  # genuinely slow for a model this size — expect minutes per image, not
+  # seconds. If you have a Linux host with an NVIDIA GPU + the NVIDIA
+  # Container Toolkit, see the comment at the top of services/sida/Dockerfile
+  # for what to change to get real GPU speed. Enable with:
+  #   docker compose --profile sida up --build
+  sida:
+    profiles: ["sida"]
+    build: ./services/sida
+    expose:
+      - "8003"
+    environment:
+      - SIDA_MODEL_ID=saberzl/SIDA-7B-description
+    volumes:
+      # Hugging Face Hub cache — the ~14GB SIDA-7B-description checkpoint is
+      # downloaded on first startup and cached here so restarts/rebuilds
+      # don't re-download it.
+      - sida_hf_cache:/root/.cache/huggingface
+    restart: unless-stopped
+
+volumes:
+  sida_hf_cache:

@@ -52,3 +52,29 @@
 .ifdl-heatmap-visible {
   opacity: 0.55;
 }
+
+/* SIDA's written explanation, shown as an excerpt on badge hover. Full text
+   lives in the popup — see popup.html/popup.js. */
+.ifdl-tooltip {
+  position: absolute;
+  bottom: 100%;
+  left: 6px;
+  margin-bottom: 6px;
+  width: max-content;
+  max-width: 260px;
+  background: rgba(20, 20, 20, 0.95);
+  color: #fff;
+  font: 400 11px/1.45 -apple-system, sans-serif;
+  padding: 8px 10px;
+  border-radius: 6px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+  opacity: 0;
+  transform: translateY(4px);
+  transition: opacity 120ms ease, transform 120ms ease;
+  pointer-events: none;
+}
+
+.ifdl-tooltip-visible {
+  opacity: 1;
+  transform: translateY(0);
+}

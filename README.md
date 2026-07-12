@@ -4,8 +4,8 @@ Chrome extension that scans images in your social feed and checks them for manip
 
 ## Structure
 
-- `extension/` — Chrome extension (Manifest V3). Finds feed images, sends them to the API, badges flagged results.
-- `api/` — REST API running TruFor + HiFi-IFDL, the two models that flag and localize manipulation.
+- `extension/` — Chrome extension (Manifest V3). Finds feed images, sends them to the API, badges flagged results, and (when SIDA is enabled) shows why an image was flagged.
+- `api/` — REST API running TruFor, HiFi-IFDL, and SIDA — the models that flag, localize, and (SIDA only) explain manipulation.
 
 ## Extension setup
 
@@ -17,4 +17,6 @@ Chrome extension that scans images in your social feed and checks them for manip
 ## API setup
 
 See [`api/README.md`](api/README.md) for full setup (Docker Compose, one manual
-weights download, and how to test it).
+weights download, and how to test it). SIDA — the model that adds a written
+explanation of *why* an image looks manipulated — is opt-in and, on CPU,
+slow (minutes per image); see that README's SIDA section before enabling it.

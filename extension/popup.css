@@ -41,3 +41,37 @@ button {
   color: #666;
   min-height: 14px;
 }
+
+.hidden {
+  display: none;
+}
+
+#lastFlagged {
+  margin-top: 14px;
+  padding-top: 10px;
+  border-top: 1px solid #ddd;
+}
+
+#lastFlagged h2 {
+  font-size: 12px;
+  margin: 0 0 4px;
+}
+
+#lastFlaggedMeta {
+  font-size: 11px;
+  color: #666;
+  margin: 0 0 6px;
+}
+
+#lastFlagged summary {
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+#lastFlaggedExplanation {
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  margin: 6px 0 0;
+}
